@@ -1482,7 +1482,7 @@ public abstract class GLMTask  {
    */
   public static class GLMIterationTask extends FrameTask2<GLMIterationTask> {
     final GLMWeightsFun _glmf;
-    double [][]_beta_multinomial;
+    final boolean _useCODSolver;  // true if solver==COORDINATE_DESCENT is enabled
     double []_beta;
     protected Gram  _gram; // wx%*%x
     double [] _xy; // wx^t%*%z,
@@ -1503,17 +1503,28 @@ public abstract class GLMTask  {
       _beta = beta;
       _ymu = null;
       _glmf = glmw;
+      _useCODSolver = false;
     }
 
-    public  GLMIterationTask(Key jobKey, DataInfo dinfo, GLMWeightsFun glmw, double [] beta, int c) {
+    public  GLMIterationTask(Key jobKey, DataInfo dinfo, GLMWeightsFun glmw,double [] beta, boolean usecod) {
+      super(null,dinfo,jobKey);
+      _beta = beta;
+      _ymu = null;
+      _glmf = glmw;
+      _useCODSolver = usecod;
+    }
+
+    public  GLMIterationTask(Key jobKey, DataInfo dinfo, GLMWeightsFun glmw, double [] beta, int c, boolean usecod) {
       super(null,dinfo,jobKey);
       _beta = beta;
       _ymu = null;
       _glmf = glmw;
       _c = c;
+      _useCODSolver = usecod;
     }
 
     @Override public boolean handlesSparseData(){return true;}
+
 
     transient private double _sparseOffset;
     @Override
@@ -1533,36 +1544,61 @@ public abstract class GLMTask  {
       double y = r.response(0);
       _yy += y*y;
       final int numStart = _dinfo.numStart();
-      double wz,w;
-      if(_glmf._family == Family.multinomial) {
-        y = (y == _c)?1:0;
-        double mu = r.response(1);
-        double eta = r.response(2);
-        double d = mu*(1-mu);
-        if(d == 0) d = 1e-10;
-        wz = r.weight * (eta * d + (y-mu));
-        w  = r.weight * d;
-      } else if(_beta != null) {
-        _glmf.computeWeights(y, r.innerProduct(_beta) + _sparseOffset, r.offset, r.weight, _w);
-        w = _w.w;
-        wz = w*_w.z;
-        _likelihood += _w.l;
+
+      if (_useCODSolver) {
+        if(_glmf._family == Family.multinomial) {
+          y = (y == _c)?1:0; // indicator function here: I(y==_c)
+          double mu = r.response(1); // prob(y=_c)
+          //  double eta = r.response(2); // betajT*r+betj0
+          _w.prOneMinpr = r.weight * mu*(1-mu); // equivalent to prOneMinpr
+          _w.respMinusPr = r.weight * (y-mu);
+        } else if(_beta != null) {
+          _glmf.computeWeightsCOD(y, r.innerProduct(_beta) + _sparseOffset, r.offset, r.weight, _w);
+          _likelihood += _w.l;
+        }
+
+        for(int i = 0; i < r.nBins; ++i)
+          _xy[r.binIds[i]] += _w.respMinusPr;
+        for(int i = 0; i < r.nNums; ++i){
+          int id = r.numIds == null?(i + numStart):r.numIds[i];
+          double val = r.numVals[i];
+          _xy[id] += _w.respMinusPr*val;
+        }
+        if(_dinfo._intercept)
+          _xy[_xy.length-1] += _w.respMinusPr;
+        _gram.addRow(r,_w.prOneMinpr);
       } else {
-        w = r.weight;
-        wz = w*(y - r.offset);
+        double wz, w;
+        if (_glmf._family == Family.multinomial) {
+          y = (y == _c) ? 1 : 0;
+          double mu = r.response(1);
+          double eta = r.response(2);
+          double d = mu * (1 - mu);
+          if (d == 0) d = 1e-10;
+          wz = r.weight * (eta * d + (y - mu));
+          w = r.weight * d;
+        } else if (_beta != null) {
+          _glmf.computeWeights(y, r.innerProduct(_beta) + _sparseOffset, r.offset, r.weight, _w);
+          w = _w.w;
+          wz = w * _w.z;
+          _likelihood += _w.l;
+        } else {
+          w = r.weight;
+          wz = w * (y - r.offset);
+        }
+        wsum += w;
+        wsumu += r.weight; // just add the user observation weight for the scaling.
+        for (int i = 0; i < r.nBins; ++i)
+          _xy[r.binIds[i]] += wz;
+        for (int i = 0; i < r.nNums; ++i) {
+          int id = r.numIds == null ? (i + numStart) : r.numIds[i];
+          double val = r.numVals[i];
+          _xy[id] += wz * val;
+        }
+        if (_dinfo._intercept)
+          _xy[_xy.length - 1] += wz;
+        _gram.addRow(r, w);
       }
-      wsum+=w;
-      wsumu+=r.weight; // just add the user observation weight for the scaling.
-      for(int i = 0; i < r.nBins; ++i)
-        _xy[r.binIds[i]] += wz;
-      for(int i = 0; i < r.nNums; ++i){
-        int id = r.numIds == null?(i + numStart):r.numIds[i];
-        double val = r.numVals[i];
-        _xy[id] += wz*val;
-      }
-      if(_dinfo._intercept)
-        _xy[_xy.length-1] += wz;
-      _gram.addRow(r,w);
     }
 
     @Override
@@ -1572,12 +1608,15 @@ public abstract class GLMTask  {
     public void reduce(GLMIterationTask git){
       ArrayUtils.add(_xy, git._xy);
       _gram.add(git._gram);
-      _nobs += git._nobs;
-      wsum += git.wsum;
-      wsumu += git.wsumu;
       _likelihood += git._likelihood;
-      _sumsqe += git._sumsqe;
-      _yy += git._yy;
+      _nobs += git._nobs;
+
+      if (!_useCODSolver) {
+        wsum += git.wsum;
+        wsumu += git.wsumu;
+        _sumsqe += git._sumsqe;
+        _yy += git._yy;
+      }
       super.reduce(git);
     }
 
@@ -2004,20 +2043,31 @@ public abstract class GLMTask  {
     double [] _xy;
     final double [] _beta;
     final GLMWeightsFun _glmf;
+    final boolean _useCODnBM;
 
     public GLMIncrementalGramTask(int [] newCols, DataInfo dinfo, GLMWeightsFun glmf, double [] beta){
       this._newCols = newCols;
       _glmf = glmf;
       _dinfo = dinfo;
       _beta = beta;
+      _useCODnBM = false;
     }
+
+    public GLMIncrementalGramTask(int [] newCols, DataInfo dinfo, GLMWeightsFun glmf, double [] beta, boolean usecod){
+      this._newCols = newCols;
+      _glmf = glmf;
+      _dinfo = dinfo;
+      _beta = beta;
+      _useCODnBM = usecod;
+    }
+
     public void map(Chunk[] chks) {
       GLMWeights glmw = new GLMWeights();
       double [] wsum = new double[_dinfo.fullN()+1];
       double ywsum = 0;
       DataInfo.Rows rows = _dinfo.rows(chks);
       double [][] gram = new double[_newCols.length][_dinfo.fullN() + 1];
-      double [] xy = new double[_newCols.length];
+      double [] xy = new double[_newCols.length]; // should store partial derivatives of objective wrt to coeffs for COD
       final int ns = _dinfo.numStart();
       double sparseOffset = rows._sparse?GLM.sparseOffset(_beta,_dinfo):0;
       for (int rid = 0; rid < rows._nrows; ++rid) {
@@ -2026,6 +2076,12 @@ public abstract class GLMTask  {
         if(r.weight == 0) continue;
         if(_beta != null) {
           _glmf.computeWeights(r.response(0), r.innerProduct(_beta) + sparseOffset, r.offset, r.weight, glmw);
+/*
+          if (_useCODnBM)
+            _glmf.computeWeightsCOD(r.response(0), r.innerProduct(_beta) + sparseOffset, r.offset, r.weight, glmw);
+          else
+            _glmf.computeWeights(r.response(0), r.innerProduct(_beta) + sparseOffset, r.offset, r.weight, glmw);
+*/
         } else {
           glmw.w = r.weight;
           glmw.z = r.response(0);
@@ -2040,6 +2096,7 @@ public abstract class GLMTask  {
             break;
           if (r.binIds[i] == _newCols[j]) {
             r.addToArray(glmw.w, gram[j]);
+           // xy[j] += _useCODnBM?(_glmf._family.equals(Family.binomial)?glmw.respMinusPr:glmw.w*r.response(1)*(1-r.response(1))):glmw.w*glmw.z;
             xy[j] += glmw.w*glmw.z;
             j++;
           }
