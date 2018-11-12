@@ -9,11 +9,11 @@ import ai.h2o.webserver.iface.H2OServletContainerFacade;
 public class Jetty8Facade implements H2OServletContainerFacade {
   @Override
   public H2OServletContainer createServletContainer(H2OHttpServer h2OHttpServer) {
-    return Jetty8Adapter.createServerAdapter(h2OHttpServer);
+    return Jetty8ServerAdapter.create(h2OHttpServer);
   }
 
   @Override
   public H2OProxy createProxy(H2OHttpServer h2oHttpServer, Credentials credentials, String proxyTo) {
-    return Jetty8Adapter.createProxyAdapter(h2oHttpServer, credentials, proxyTo);
+    return Jetty8ProxyAdapter.create(h2oHttpServer, credentials, proxyTo);
   }
 }

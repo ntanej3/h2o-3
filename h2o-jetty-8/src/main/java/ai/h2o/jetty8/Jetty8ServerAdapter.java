@@ -1,0 +1,120 @@
+package ai.h2o.jetty8;
+
+import ai.h2o.webserver.iface.H2OHttpServer;
+import ai.h2o.webserver.iface.H2OServletContainer;
+import ai.h2o.webserver.iface.RequestAuthExtension;
+import ai.h2o.webserver.iface.WebServerConfig;
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.server.handler.HandlerWrapper;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
+class Jetty8ServerAdapter implements H2OServletContainer {
+  private final Jetty8Helper helper;
+  private final H2OHttpServer h2oHttpServer;
+  private Server jettyServer;
+
+  private Jetty8ServerAdapter(Jetty8Helper helper, H2OHttpServer h2oHttpServer) {
+    this.helper = helper;
+    this.h2oHttpServer = h2oHttpServer;
+  }
+
+  static H2OServletContainer create(final H2OHttpServer h2oHttpServer) {
+    final Jetty8Helper helper = new Jetty8Helper(h2oHttpServer);
+    return new Jetty8ServerAdapter(helper, h2oHttpServer);
+  }
+
+  @Override
+  public void start(String ip, int port) throws Exception {
+    jettyServer = helper.createJettyServer(ip, port);
+    final HandlerWrapper handlerWrapper = helper.authWrapper(jettyServer);
+    final ServletContextHandler context = helper.createServletContextHandler();
+    registerHandlers(handlerWrapper, context);
+    jettyServer.start();
+  }
+
+  /**
+   * Stop Jetty server after it has been started.
+   * This is unlikely to ever be called by H2O until H2O supports graceful shutdown.
+   *
+   * @throws Exception -
+   */
+  @Override
+  public void stop() throws Exception {
+    if (jettyServer != null) {
+      jettyServer.stop();
+    }
+  }
+
+  private void registerHandlers(HandlerWrapper handlerWrapper, ServletContextHandler context) {
+    final WebServerConfig config = h2oHttpServer.getConfig();
+    for (Map.Entry<String, Class<? extends HttpServlet>> entry : config.servlets.entrySet()) { /// todo move under h2oHttpServer
+      context.addServlet(entry.getValue(), entry.getKey());
+    }
+
+    final List<Handler> extHandlers = new ArrayList<>();
+    extHandlers.add(helper.authenticationHandler());
+    // here we wrap generic authentication handlers into jetty-aware wrappers
+    final Collection<RequestAuthExtension> authExtensions = h2oHttpServer.getAuthExtensions();
+    for (final RequestAuthExtension requestAuthExtension : authExtensions) {
+      extHandlers.add(new AbstractHandler() {
+        @Override
+        public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+          if (requestAuthExtension.handle(target, request, response)) {
+            baseRequest.setHandled(true);
+          }
+        }
+      });
+    }
+    //
+    extHandlers.add(context);
+
+    // Handlers that can only be invoked for an authenticated user (if auth is enabled)
+    HandlerCollection authHandlers = new HandlerCollection();
+    authHandlers.setHandlers(extHandlers.toArray(new Handler[0]));
+
+    // LoginHandler handles directly login requests and delegates the rest to the authHandlers
+    final LoginHandler loginHandler = new LoginHandler();
+    loginHandler.setHandler(authHandlers);
+
+    HandlerCollection hc = new HandlerCollection();
+    hc.setHandlers(new Handler[]{
+        new GateHandler(),
+        loginHandler
+    });
+    handlerWrapper.setHandler(hc);
+  }
+
+  private class LoginHandler extends HandlerWrapper {
+    @Override
+    public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response)
+        throws IOException, ServletException {
+      final boolean handled = h2oHttpServer.loginHandler(target, request, response);
+      if (handled) {
+        baseRequest.setHandled(true);
+      } else {
+        super.handle(target, baseRequest, request, response);
+      }
+    }
+  }
+
+  private class GateHandler extends AbstractHandler {
+    @Override
+    public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) {
+      h2oHttpServer.gateHandler(request, response);
+    }
+  }
+}
