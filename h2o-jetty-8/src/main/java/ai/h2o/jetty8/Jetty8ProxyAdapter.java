@@ -22,7 +22,6 @@ class Jetty8ProxyAdapter implements H2OProxy {
   private final H2OHttpServer h2oHttpServer;
   private final Credentials credentials;
   private final String proxyTo;
-  private int port;
 
   private Jetty8ProxyAdapter(Jetty8Helper helper, H2OHttpServer h2oHttpServer, Credentials credentials, String proxyTo) {
     this.helper = helper;
@@ -37,17 +36,11 @@ class Jetty8ProxyAdapter implements H2OProxy {
   }
 
   @Override
-  public int getPort() { // todo move this to proxy starter side
-    return port;
-  }
-
-  @Override
   public void start(String ip, int port) throws Exception {
     final Server jettyServer = helper.createJettyServer(ip, port);
     final HandlerWrapper handlerWrapper = helper.authWrapper(jettyServer);
     final ServletContextHandler context = helper.createServletContextHandler();
     registerHandlers(handlerWrapper, context, credentials, proxyTo);
-    this.port = port;
     jettyServer.start();
   }
 
