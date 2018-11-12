@@ -6,9 +6,6 @@ import java.io.IOException;
 import java.util.Collection;
 
 public interface H2OHttpServer {
-  void acceptRequests();
-
-  String getScheme();
 
   boolean authenticationHandler(HttpServletRequest request, HttpServletResponse response) throws IOException;
 

@@ -29,7 +29,6 @@ public class H2OHttpServerImpl implements H2OHttpServer {
     this.config = config;
   }
 
-  @Override
   public void acceptRequests() {
     _acceptRequests = true;
   }
@@ -37,7 +36,6 @@ public class H2OHttpServerImpl implements H2OHttpServer {
   /**
    * @return URI scheme
    */
-  @Override
   public String getScheme() {
     if (config.jks != null) {
       return "https";
