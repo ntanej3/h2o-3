@@ -59,12 +59,8 @@ public class H2OHttpServerImpl implements H2OHttpServer {
       return false;
     }
     Log.warn("Login name (" + loginName + ") does not match cluster owner name (" + config.user_name + ")");
-    sendUnauthorizedResponse(response, "Login name does not match cluster owner name");
+    ServletUtils.sendResponseError(response, HttpServletResponse.SC_UNAUTHORIZED, "Login name does not match cluster owner name");
     return true;
-  }
-
-  public void sendUnauthorizedResponse(HttpServletResponse response, String message) throws IOException {
-    ServletUtils.sendResponseError(response, HttpServletResponse.SC_UNAUTHORIZED, message);
   }
 
   @Override
