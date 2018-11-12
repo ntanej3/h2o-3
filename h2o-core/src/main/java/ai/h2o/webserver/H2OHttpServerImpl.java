@@ -128,9 +128,6 @@ public class H2OHttpServerImpl implements H2OHttpServer {
       ServletUtils.setResponseStatus(response, HttpServletResponse.SC_OK);
       final OutputStream os = response.getOutputStream();
       water.util.FileUtils.copyStream(new ByteArrayInputStream(bytes), os, 2048);
-      // TODO: this whole method can be replaced with just:
-      // org.apache.commons.io.IOUtils.copy( water.init.JarHash.getResource2("/login.html"), os);
-      // but it needs to be properly tested; this is probably due to Content-Length
     } catch (Exception e) {
       ServletUtils.sendErrorResponse(response, e, uri);
     } finally {

@@ -60,9 +60,6 @@ public class ProxyLoginHandler extends HandlerWrapper {
     response.setContentLength(_loginFormData.length);
     response.setStatus(HttpServletResponse.SC_OK);
     IOUtils.write(_loginFormData, response.getOutputStream());
-    // TODO: this whole method and all about can be replaced with just:
-    // org.apache.commons.io.IOUtils.copy(getClass().getResourceAsStream("/www/login.html"), os);
-    // but it needs to be properly tested
   }
 
   private boolean isPageRequest(HttpServletRequest request) {
