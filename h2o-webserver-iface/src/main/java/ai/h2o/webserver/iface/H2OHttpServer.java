@@ -19,4 +19,6 @@ public interface H2OHttpServer {
   WebServerConfig getConfig();
 
   Collection<RequestAuthExtension> getAuthExtensions();
+
+  boolean proxyLoginHandler(String target, HttpServletRequest request, HttpServletResponse response) throws IOException;
 }

@@ -1,6 +1,5 @@
 package ai.h2o.jetty8;
 
-import ai.h2o.jetty8.proxy.ProxyLoginHandler;
 import ai.h2o.jetty8.proxy.TransparentProxyServlet;
 import ai.h2o.webserver.iface.Credentials;
 import ai.h2o.webserver.iface.H2OHttpServer;
@@ -317,7 +316,7 @@ class Jetty8Adapter {
         context,
     });
     // handles requests of login form and delegates the rest to the authHandlers
-    final ProxyLoginHandler loginHandler = new ProxyLoginHandler("/login", "/loginError");
+    final ProxyLoginHandler loginHandler = new ProxyLoginHandler();
     loginHandler.setHandler(authHandlers);
     // login handler is the root handler
     handlerWrapper.setHandler(loginHandler);
@@ -345,7 +344,19 @@ class Jetty8Adapter {
         super.handle(target, baseRequest, request, response);
       }
     }
+  }
 
+  class ProxyLoginHandler extends HandlerWrapper {
+    @Override
+    public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response)
+        throws IOException, ServletException {
+      final boolean handled = h2oHttpServer.proxyLoginHandler(target, request, response);
+      if (handled) {
+        baseRequest.setHandled(true);
+      } else {
+        super.handle(target, baseRequest, request, response);
+      }
+    }
   }
 
   class GateHandler extends AbstractHandler {

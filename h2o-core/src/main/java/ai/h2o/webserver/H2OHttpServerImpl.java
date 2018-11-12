@@ -3,6 +3,7 @@ package ai.h2o.webserver;
 import ai.h2o.webserver.iface.H2OHttpServer;
 import ai.h2o.webserver.iface.RequestAuthExtension;
 import ai.h2o.webserver.iface.WebServerConfig;
+import org.apache.commons.io.IOUtils;
 import water.ExtensionManager;
 import water.api.RequestServer;
 import water.server.ServletUtils;
@@ -66,12 +67,6 @@ public class H2OHttpServerImpl implements H2OHttpServer {
     ServletUtils.sendResponseError(response, HttpServletResponse.SC_UNAUTHORIZED, message);
   }
 
-  //TODO make this effective in proxy instead of sendUnauthorizedResponse
-  public void sendUnauthorizedResponse__Proxy(HttpServletResponse response, String message) throws IOException {
-    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, message);
-  }
-
-
   @Override
   public void gateHandler(HttpServletRequest request, HttpServletResponse response) {
     ServletUtils.startRequestLifecycle();
@@ -88,6 +83,19 @@ public class H2OHttpServerImpl implements H2OHttpServer {
   }
 
   @Override
+  public WebServerConfig getConfig() {
+    return config;
+  }
+
+  @Override
+  public Collection<RequestAuthExtension> getAuthExtensions() {
+    return ExtensionManager.getInstance().getAuthExtensions();
+  }
+
+
+  // normal login handler part //todo: consider using mostly the same code as in proxy part below
+
+  @Override
   public boolean loginHandler(String target, HttpServletRequest request, HttpServletResponse response) throws IOException {
     if (! isLoginTarget(target)) {
       return false;
@@ -99,16 +107,6 @@ public class H2OHttpServerImpl implements H2OHttpServer {
       ServletUtils.sendResponseError(response, HttpServletResponse.SC_UNAUTHORIZED, "Access denied. Please login.");
     }
     return true;
-  }
-
-  @Override
-  public WebServerConfig getConfig() {
-    return config;
-  }
-
-  @Override
-  public Collection<RequestAuthExtension> getAuthExtensions() {
-    return ExtensionManager.getInstance().getAuthExtensions();
   }
 
   private static void sendLoginForm(HttpServletRequest request, HttpServletResponse response) {
@@ -142,6 +140,44 @@ public class H2OHttpServerImpl implements H2OHttpServer {
 
   private static boolean isLoginTarget(String target) {
     return target.equals("/login") || target.equals("/loginError");
+  }
+
+  // proxy login handler part
+
+  @Override
+  public boolean proxyLoginHandler(String target, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    if (! isLoginTarget(target)) {
+      return false;
+    }
+
+    if (isPageRequest(request)) {
+      proxySendLoginForm(response);
+    } else {
+      response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Access denied. Please login.");
+    }
+    return true;
+  }
+
+  private static byte[] proxyLoadLoginFormResource() throws IOException {
+    final InputStream loginFormStream = H2OHttpServer.class.getResourceAsStream("/www/login.html");
+    if (loginFormStream == null) {
+      throw new IllegalStateException("Login form resource is missing.");
+    }
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    IOUtils.copy(loginFormStream, baos);
+    return baos.toByteArray();
+  }
+
+  private byte[] proxyLoginFormData;
+
+  private void proxySendLoginForm(HttpServletResponse response) throws IOException {
+    if (proxyLoginFormData == null) {
+      proxyLoginFormData = proxyLoadLoginFormResource();
+    }
+    response.setContentType("text/html");
+    response.setContentLength(proxyLoginFormData.length);
+    response.setStatus(HttpServletResponse.SC_OK);
+    IOUtils.write(proxyLoginFormData, response.getOutputStream());
   }
 
 }
