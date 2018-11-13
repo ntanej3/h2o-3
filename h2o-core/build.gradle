@@ -15,7 +15,8 @@ dependencies {
   compile 'org.javassist:javassist:3.23.1-GA'
   compile "org.apache.commons:commons-math3:3.3"
   compile "commons-io:commons-io:2.4"
-  compile "javax.servlet:servlet-api:2.5"
+  compileOnly "javax.servlet:servlet-api:2.5"
+  testCompileOnly "javax.servlet:servlet-api:2.5"
   compile ("com.github.rwl:jtransforms:2.4.0") { exclude module: "junit" }
   compile project(":h2o-jaas-pam")
 
