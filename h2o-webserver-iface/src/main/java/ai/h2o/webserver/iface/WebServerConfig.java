@@ -1,7 +1,5 @@
 package ai.h2o.webserver.iface;
 
-import javax.servlet.http.HttpServlet;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class WebServerConfig {
@@ -32,8 +30,6 @@ public class WebServerConfig {
   public String context_path;
 
   public Map<String,String> h2oExtendedHeaders;
-
-  public LinkedHashMap<String, Class<? extends HttpServlet>> servlets;
 
   // proxy only:
 

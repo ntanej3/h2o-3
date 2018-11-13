@@ -5,10 +5,15 @@ import ai.h2o.webserver.iface.RequestAuthExtension;
 import ai.h2o.webserver.iface.WebServerConfig;
 import org.apache.commons.io.IOUtils;
 import water.ExtensionManager;
+import water.api.DatasetServlet;
+import water.api.NpsBinServlet;
+import water.api.PostFileServlet;
+import water.api.PutKeyServlet;
 import water.api.RequestServer;
 import water.server.ServletUtils;
 import water.util.Log;
 
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
@@ -17,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 
 /**
  * This is intended to be a singleton per H2O node.
@@ -24,6 +30,17 @@ import java.util.Collection;
 public class H2OHttpServerImpl implements H2OHttpServer {
   private static volatile boolean _acceptRequests = false;
   private final WebServerConfig config;
+  private static final LinkedHashMap<String, Class<? extends HttpServlet>> SERVLETS = new LinkedHashMap<>();
+  static {
+    SERVLETS.put("/3/NodePersistentStorage.bin/*", NpsBinServlet.class);
+    SERVLETS.put("/3/PostFile.bin", PostFileServlet.class);
+    SERVLETS.put("/3/PostFile", PostFileServlet.class);
+    SERVLETS.put("/3/DownloadDataset", DatasetServlet.class);
+    SERVLETS.put("/3/DownloadDataset.bin", DatasetServlet.class);
+    SERVLETS.put("/3/PutKey.bin", PutKeyServlet.class);
+    SERVLETS.put("/3/PutKey", PutKeyServlet.class);
+    SERVLETS.put("/", RequestServer.class);
+  }
 
   public H2OHttpServerImpl(WebServerConfig config) {
     this.config = config;
@@ -43,6 +60,11 @@ public class H2OHttpServerImpl implements H2OHttpServer {
     else {
       return "http";
     }
+  }
+
+  @Override
+  public LinkedHashMap<String, Class<? extends HttpServlet>> getServlets() {
+    return SERVLETS;
   }
 
   @Override

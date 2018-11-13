@@ -2,7 +2,6 @@ package water;
 
 import ai.h2o.webserver.H2OHttpServerImpl;
 import ai.h2o.webserver.iface.Credentials;
-import ai.h2o.webserver.iface.H2OHttpServer;
 import ai.h2o.webserver.iface.H2OProxy;
 import ai.h2o.webserver.iface.H2OServletContainerLoader;
 import ai.h2o.webserver.iface.WebServerConfig;
@@ -25,7 +24,7 @@ public class ProxyStarter {
 
     final H2O.OptArgs baseArgs = H2O.parseH2OArgumentsTo(args, new H2O.OptArgs());
     final WebServerConfig config = NetworkInit.webServerParams(baseArgs);
-    final H2OHttpServer h2oDock = new H2OHttpServerImpl(config);
+    final H2OHttpServerImpl h2oDock = new H2OHttpServerImpl(config);
     final H2OProxy proxy = H2OServletContainerLoader.INSTANCE.createProxy(h2oDock, credentials, proxyTo);
     final int proxyPort = initializeProxy(proxy, config);
 

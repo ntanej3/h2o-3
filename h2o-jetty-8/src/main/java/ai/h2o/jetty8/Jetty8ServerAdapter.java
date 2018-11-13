@@ -3,7 +3,6 @@ package ai.h2o.jetty8;
 import ai.h2o.webserver.iface.H2OHttpServer;
 import ai.h2o.webserver.iface.H2OServletContainer;
 import ai.h2o.webserver.iface.RequestAuthExtension;
-import ai.h2o.webserver.iface.WebServerConfig;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -60,8 +59,7 @@ class Jetty8ServerAdapter implements H2OServletContainer {
   }
 
   private void registerHandlers(HandlerWrapper handlerWrapper, ServletContextHandler context) {
-    final WebServerConfig config = h2oHttpServer.getConfig();
-    for (Map.Entry<String, Class<? extends HttpServlet>> entry : config.servlets.entrySet()) { /// todo move under h2oHttpServer
+    for (Map.Entry<String, Class<? extends HttpServlet>> entry : h2oHttpServer.getServlets().entrySet()) {
       context.addServlet(entry.getValue(), entry.getKey());
     }
 
