@@ -23,7 +23,12 @@ import java.util.Arrays;
  * Utilities supporting HTTP server-side functionality, without depending on specific version of Jetty, or on Jetty at all.
  */
 public class ServletUtils {
-  private static final ThreadLocal<Long> _startMillis = new ThreadLocal<>();
+  private static final ThreadLocal<Long> _startMillis = new ThreadLocal<Long>() {
+    @Override
+    protected Long initialValue() {
+      return System.currentTimeMillis();
+    }
+  };
   private static final ThreadLocal<Integer> _status = new ThreadLocal<>();
   private static final ThreadLocal<String> _userAgent = new ThreadLocal<>();
 
