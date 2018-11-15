@@ -1,5 +1,4 @@
 package ai.h2o.webserver.iface;
-//package water.server;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;

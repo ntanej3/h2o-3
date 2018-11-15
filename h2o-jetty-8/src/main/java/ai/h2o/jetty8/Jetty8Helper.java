@@ -1,8 +1,8 @@
 package ai.h2o.jetty8;
 
-import ai.h2o.webserver.iface.H2OHttpServer;
+import ai.h2o.webserver.iface.H2OHttpConfig;
+import ai.h2o.webserver.iface.H2OHttpView;
 import ai.h2o.webserver.iface.LoginType;
-import ai.h2o.webserver.iface.WebServerConfig;
 import org.eclipse.jetty.plus.jaas.JAASLoginService;
 import org.eclipse.jetty.security.Authenticator;
 import org.eclipse.jetty.security.ConstraintMapping;
@@ -35,15 +35,15 @@ import java.util.Collections;
 
 class Jetty8Helper {
 
-  private final WebServerConfig config;
-  private final H2OHttpServer h2oHttpServer;
+  private final H2OHttpConfig config;
+  private final H2OHttpView h2oHttpView;
 
   private String _ip;
   private int _port;
 
-  Jetty8Helper(H2OHttpServer h2oHttpServer) {
-    this.h2oHttpServer = h2oHttpServer;
-    this.config = h2oHttpServer.getConfig();
+  Jetty8Helper(H2OHttpView h2oHttpView) {
+    this.h2oHttpView = h2oHttpView;
+    this.config = h2oHttpView.getConfig();
   }
 
   private void setup(String ip, int port) {
@@ -181,7 +181,7 @@ class Jetty8Helper {
   }
 
   private static int getSysPropInt(String suffix, int defaultValue) {
-    return Integer.getInteger(WebServerConfig.SYSTEM_PROP_PREFIX + suffix, defaultValue);
+    return Integer.getInteger(H2OHttpConfig.SYSTEM_PROP_PREFIX + suffix, defaultValue);
   }
 
   /**
@@ -210,7 +210,7 @@ class Jetty8Helper {
     @Override
     public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response)
         throws IOException {
-      boolean handled = h2oHttpServer.authenticationHandler(request, response);
+      boolean handled = h2oHttpView.authenticationHandler(request, response);
       if (handled) {
         baseRequest.setHandled(true);
       }

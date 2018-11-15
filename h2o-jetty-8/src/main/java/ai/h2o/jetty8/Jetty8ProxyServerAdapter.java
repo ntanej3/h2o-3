@@ -2,8 +2,8 @@ package ai.h2o.jetty8;
 
 import ai.h2o.jetty8.proxy.TransparentProxyServlet;
 import ai.h2o.webserver.iface.Credentials;
-import ai.h2o.webserver.iface.H2OHttpServer;
-import ai.h2o.webserver.iface.H2OProxy;
+import ai.h2o.webserver.iface.H2OHttpView;
+import ai.h2o.webserver.iface.ProxyServer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -17,22 +17,22 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-class Jetty8ProxyAdapter implements H2OProxy {
+class Jetty8ProxyServerAdapter implements ProxyServer {
   private final Jetty8Helper helper;
-  private final H2OHttpServer h2oHttpServer;
+  private final H2OHttpView h2oHttpView;
   private final Credentials credentials;
   private final String proxyTo;
 
-  private Jetty8ProxyAdapter(Jetty8Helper helper, H2OHttpServer h2oHttpServer, Credentials credentials, String proxyTo) {
+  private Jetty8ProxyServerAdapter(Jetty8Helper helper, H2OHttpView h2oHttpView, Credentials credentials, String proxyTo) {
     this.helper = helper;
-    this.h2oHttpServer = h2oHttpServer;
+    this.h2oHttpView = h2oHttpView;
     this.credentials = credentials;
     this.proxyTo = proxyTo;
   }
 
-  static H2OProxy create(final H2OHttpServer h2oHttpServer, final Credentials credentials, final String proxyTo) {
-    final Jetty8Helper helper = new Jetty8Helper(h2oHttpServer);
-    return new Jetty8ProxyAdapter(helper, h2oHttpServer, credentials, proxyTo);
+  static ProxyServer create(final H2OHttpView h2oHttpView, final Credentials credentials, final String proxyTo) {
+    final Jetty8Helper helper = new Jetty8Helper(h2oHttpView);
+    return new Jetty8ProxyServerAdapter(helper, h2oHttpView, credentials, proxyTo);
   }
 
   @Override
@@ -68,7 +68,7 @@ class Jetty8ProxyAdapter implements H2OProxy {
     @Override
     public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response)
         throws IOException, ServletException {
-      final boolean handled = h2oHttpServer.proxyLoginHandler(target, request, response);
+      final boolean handled = h2oHttpView.proxyLoginHandler(target, request, response);
       if (handled) {
         baseRequest.setHandled(true);
       } else {

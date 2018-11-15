@@ -1,19 +1,19 @@
 package ai.h2o.jetty8;
 
 import ai.h2o.webserver.iface.Credentials;
-import ai.h2o.webserver.iface.H2OHttpServer;
-import ai.h2o.webserver.iface.H2OProxy;
-import ai.h2o.webserver.iface.H2OServletContainer;
-import ai.h2o.webserver.iface.H2OServletContainerFacade;
+import ai.h2o.webserver.iface.H2OHttpView;
+import ai.h2o.webserver.iface.HttpServerFacade;
+import ai.h2o.webserver.iface.ProxyServer;
+import ai.h2o.webserver.iface.WebServer;
 
-public class Jetty8Facade implements H2OServletContainerFacade {
+public class Jetty8Facade implements HttpServerFacade {
   @Override
-  public H2OServletContainer createServletContainer(H2OHttpServer h2OHttpServer) {
-    return Jetty8ServerAdapter.create(h2OHttpServer);
+  public WebServer createWebServer(H2OHttpView h2oHttpView) {
+    return Jetty8ServerAdapter.create(h2oHttpView);
   }
 
   @Override
-  public H2OProxy createProxy(H2OHttpServer h2oHttpServer, Credentials credentials, String proxyTo) {
-    return Jetty8ProxyAdapter.create(h2oHttpServer, credentials, proxyTo);
+  public ProxyServer createProxyServer(H2OHttpView h2oHttpView, Credentials credentials, String proxyTo) {
+    return Jetty8ProxyServerAdapter.create(h2oHttpView, credentials, proxyTo);
   }
 }

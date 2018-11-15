@@ -1,9 +1,9 @@
 package water.init;
 
-import ai.h2o.webserver.H2OHttpServerImpl;
-import ai.h2o.webserver.iface.H2OServletContainerLoader;
+import ai.h2o.webserver.H2OHttpViewImpl;
+import ai.h2o.webserver.iface.H2OHttpConfig;
+import ai.h2o.webserver.iface.HttpServerLoader;
 import ai.h2o.webserver.iface.LoginType;
-import ai.h2o.webserver.iface.WebServerConfig;
 import water.H2O;
 import water.H2ONode;
 import water.server.ServletUtils;
@@ -43,7 +43,7 @@ public class NetworkInit {
 
   public static ServerSocketChannel _tcpSocket;
 
-  public static H2OHttpServerImpl h2oHttpServer;
+  public static H2OHttpViewImpl h2oHttpView;
 
   public static InetAddress findInetAddressForSelf() throws Error {
     if (H2O.SELF_ADDRESS != null)
@@ -73,10 +73,10 @@ public class NetworkInit {
     H2O.API_PORT = H2O.ARGS.port == 0 ? H2O.ARGS.baseport : H2O.ARGS.port;
 
     // Late instantiation of web server, if needed.
-    if (H2O.getServletContainer() == null && !H2O.ARGS.disable_web) {
-      final WebServerConfig config = webServerParams(H2O.ARGS);
-      h2oHttpServer = new H2OHttpServerImpl(config);
-      H2O.setServletContainer(H2OServletContainerLoader.INSTANCE.createServletContainer(h2oHttpServer));
+    if (H2O.getWebServer() == null && !H2O.ARGS.disable_web) {
+      final H2OHttpConfig config = webServerParams(H2O.ARGS);
+      h2oHttpView = new H2OHttpViewImpl(config);
+      H2O.setWebServer(HttpServerLoader.INSTANCE.createWebServer(h2oHttpView));
     }
 
     // API socket is only used to find opened port on given ip.
@@ -113,7 +113,7 @@ public class NetworkInit {
         // Warning: There is a ip:port race between socket close and starting Jetty
         if (!H2O.ARGS.disable_web) {
           apiSocket.close();
-          H2O.getServletContainer().start(H2O.ARGS.web_ip, H2O.API_PORT);
+          H2O.getWebServer().start(H2O.ARGS.web_ip, H2O.API_PORT);
         }
 
         break;
@@ -145,7 +145,7 @@ public class NetworkInit {
     H2O.SELF = H2ONode.self(H2O.SELF_ADDRESS);
     if (!H2O.ARGS.disable_web) {
       Log.info("Internal communication uses port: ", H2O.H2O_PORT, "\n" +
-          "Listening for HTTP and REST traffic on " + H2O.getURL(h2oHttpServer.getScheme()) + "/");
+          "Listening for HTTP and REST traffic on " + H2O.getURL(h2oHttpView.getScheme()) + "/");
     }
     try {
       Log.debug("Interface MTU: ", (NetworkInterface.getByInetAddress(H2O.SELF_ADDRESS)).getMTU());
@@ -197,8 +197,8 @@ public class NetworkInit {
     H2O.CLOUD_MULTICAST_PORT = NetworkUtils.getMulticastPort(hash);
   }
 
-  public static WebServerConfig webServerParams(H2O.OptArgs args) {
-    final WebServerConfig params = new WebServerConfig();
+  public static H2OHttpConfig webServerParams(H2O.OptArgs args) {
+    final H2OHttpConfig params = new H2OHttpConfig();
     params.jks = args.jks;
     params.jks_pass = args.jks_pass;
     params.loginType = parseLoginType(args);

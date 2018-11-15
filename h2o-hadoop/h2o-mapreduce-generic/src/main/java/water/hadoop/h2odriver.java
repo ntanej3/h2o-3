@@ -186,7 +186,7 @@ public class h2odriver extends Configured implements Tool {
   public String getPublicUrl() {
     String url;
     if (client) {
-      url = H2O.getURL(NetworkInit.h2oHttpServer.getScheme());
+      url = H2O.getURL(NetworkInit.h2oHttpView.getScheme());
     } else if (proxy) {
       url = proxyUrl;
     } else {
@@ -1589,7 +1589,7 @@ public class h2odriver extends Configured implements Tool {
     // Proxy
     final Credentials proxyCredentials = proxy ? make(userName) : null;
     final String hashFileEntry = proxyCredentials != null ? proxyCredentials.toHashFileEntry() : null;
-//    H2OServletContainerLoader.INSTANCE.getHashFileEntry()
+//    HttpServerLoader.INSTANCE.getHashFileEntry()
     if (hashFileEntry != null) {
       final byte[] hashFileData = StringUtils.bytesOf(hashFileEntry);
       addMapperArg(conf, "-hash_login");

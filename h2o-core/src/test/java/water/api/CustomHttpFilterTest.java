@@ -99,7 +99,7 @@ public class CustomHttpFilterTest extends TestUtil {
     });
 
     // start the request lifecycle
-//TODO    H2O.getServletContainer().getServer().getChildHandlersByClass(JettyHTTPD.GateHandler.class)[0].handle("/", null, request, response);
+//TODO    H2O.getWebServer().getServer().getChildHandlersByClass(JettyHTTPD.GateHandler.class)[0].handle("/", null, request, response);
     new RequestServer().doGet(request, response);
 
   }

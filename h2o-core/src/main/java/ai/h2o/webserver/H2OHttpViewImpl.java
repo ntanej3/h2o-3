@@ -1,8 +1,8 @@
 package ai.h2o.webserver;
 
-import ai.h2o.webserver.iface.H2OHttpServer;
+import ai.h2o.webserver.iface.H2OHttpConfig;
+import ai.h2o.webserver.iface.H2OHttpView;
 import ai.h2o.webserver.iface.RequestAuthExtension;
-import ai.h2o.webserver.iface.WebServerConfig;
 import org.apache.commons.io.IOUtils;
 import water.ExtensionManager;
 import water.api.DatasetServlet;
@@ -27,9 +27,9 @@ import java.util.LinkedHashMap;
 /**
  * This is intended to be a singleton per H2O node.
  */
-public class H2OHttpServerImpl implements H2OHttpServer {
+public class H2OHttpViewImpl implements H2OHttpView {
   private static volatile boolean _acceptRequests = false;
-  private final WebServerConfig config;
+  private final H2OHttpConfig config;
   private static final LinkedHashMap<String, Class<? extends HttpServlet>> SERVLETS = new LinkedHashMap<>();
   static {
     SERVLETS.put("/3/NodePersistentStorage.bin/*", NpsBinServlet.class);
@@ -42,7 +42,7 @@ public class H2OHttpServerImpl implements H2OHttpServer {
     SERVLETS.put("/", RequestServer.class);
   }
 
-  public H2OHttpServerImpl(WebServerConfig config) {
+  public H2OHttpViewImpl(H2OHttpConfig config) {
     this.config = config;
   }
 
@@ -99,7 +99,7 @@ public class H2OHttpServerImpl implements H2OHttpServer {
   }
 
   @Override
-  public WebServerConfig getConfig() {
+  public H2OHttpConfig getConfig() {
     return config;
   }
 
@@ -175,7 +175,7 @@ public class H2OHttpServerImpl implements H2OHttpServer {
   }
 
   private static byte[] proxyLoadLoginFormResource() throws IOException {
-    final InputStream loginFormStream = H2OHttpServer.class.getResourceAsStream("/www/login.html");
+    final InputStream loginFormStream = H2OHttpView.class.getResourceAsStream("/www/login.html");
     if (loginFormStream == null) {
       throw new IllegalStateException("Login form resource is missing.");
     }

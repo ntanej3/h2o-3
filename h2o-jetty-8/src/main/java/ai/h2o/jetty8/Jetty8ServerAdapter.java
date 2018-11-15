@@ -1,8 +1,8 @@
 package ai.h2o.jetty8;
 
-import ai.h2o.webserver.iface.H2OHttpServer;
-import ai.h2o.webserver.iface.H2OServletContainer;
+import ai.h2o.webserver.iface.H2OHttpView;
 import ai.h2o.webserver.iface.RequestAuthExtension;
+import ai.h2o.webserver.iface.WebServer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -21,19 +21,19 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-class Jetty8ServerAdapter implements H2OServletContainer {
+class Jetty8ServerAdapter implements WebServer {
   private final Jetty8Helper helper;
-  private final H2OHttpServer h2oHttpServer;
+  private final H2OHttpView h2oHttpView;
   private Server jettyServer;
 
-  private Jetty8ServerAdapter(Jetty8Helper helper, H2OHttpServer h2oHttpServer) {
+  private Jetty8ServerAdapter(Jetty8Helper helper, H2OHttpView h2oHttpView) {
     this.helper = helper;
-    this.h2oHttpServer = h2oHttpServer;
+    this.h2oHttpView = h2oHttpView;
   }
 
-  static H2OServletContainer create(final H2OHttpServer h2oHttpServer) {
-    final Jetty8Helper helper = new Jetty8Helper(h2oHttpServer);
-    return new Jetty8ServerAdapter(helper, h2oHttpServer);
+  static WebServer create(final H2OHttpView h2oHttpView) {
+    final Jetty8Helper helper = new Jetty8Helper(h2oHttpView);
+    return new Jetty8ServerAdapter(helper, h2oHttpView);
   }
 
   @Override
@@ -59,14 +59,14 @@ class Jetty8ServerAdapter implements H2OServletContainer {
   }
 
   private void registerHandlers(HandlerWrapper handlerWrapper, ServletContextHandler context) {
-    for (Map.Entry<String, Class<? extends HttpServlet>> entry : h2oHttpServer.getServlets().entrySet()) {
+    for (Map.Entry<String, Class<? extends HttpServlet>> entry : h2oHttpView.getServlets().entrySet()) {
       context.addServlet(entry.getValue(), entry.getKey());
     }
 
     final List<Handler> extHandlers = new ArrayList<>();
     extHandlers.add(helper.authenticationHandler());
     // here we wrap generic authentication handlers into jetty-aware wrappers
-    final Collection<RequestAuthExtension> authExtensions = h2oHttpServer.getAuthExtensions();
+    final Collection<RequestAuthExtension> authExtensions = h2oHttpView.getAuthExtensions();
     for (final RequestAuthExtension requestAuthExtension : authExtensions) {
       extHandlers.add(new AbstractHandler() {
         @Override
@@ -100,7 +100,7 @@ class Jetty8ServerAdapter implements H2OServletContainer {
     @Override
     public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response)
         throws IOException, ServletException {
-      final boolean handled = h2oHttpServer.loginHandler(target, request, response);
+      final boolean handled = h2oHttpView.loginHandler(target, request, response);
       if (handled) {
         baseRequest.setHandled(true);
       } else {
@@ -112,7 +112,7 @@ class Jetty8ServerAdapter implements H2OServletContainer {
   private class GateHandler extends AbstractHandler {
     @Override
     public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) {
-      h2oHttpServer.gateHandler(request, response);
+      h2oHttpView.gateHandler(request, response);
     }
   }
 }
