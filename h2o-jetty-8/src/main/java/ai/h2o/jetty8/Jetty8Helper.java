@@ -38,31 +38,50 @@ class Jetty8Helper {
   private final H2OHttpConfig config;
   private final H2OHttpView h2oHttpView;
 
-  private String _ip;
-  private int _port;
-
   Jetty8Helper(H2OHttpView h2oHttpView) {
     this.h2oHttpView = h2oHttpView;
     this.config = h2oHttpView.getConfig();
   }
 
-  private void setup(String ip, int port) {
-    _ip = ip;
-    _port = port;
-    System.setProperty("org.eclipse.jetty.server.Request.maxFormContentSize", Integer.toString(Integer.MAX_VALUE));
-  }
-
   Server createJettyServer(String ip, int port) {
-    final boolean useHttps = config.jks != null;
-    setup(ip, port);
+    System.setProperty("org.eclipse.jetty.server.Request.maxFormContentSize", Integer.toString(Integer.MAX_VALUE));
 
     final Server jettyServer = new Server();
     jettyServer.setSendServerVersion(false);
 
-    final Connector connector = useHttps ? createHttpsConnector() : createHttpConnector();
+    final Connector connector;
+    final String proto;
+    if (config.jks != null) {
+      proto = "https";
+      final SslContextFactory sslContextFactory = new SslContextFactory(config.jks);
+      sslContextFactory.setKeyStorePassword(config.jks_pass);
+      connector = new SslSocketConnector(sslContextFactory);
+    } else {
+      proto = "http";
+      connector = new SocketConnector();
+    }
+    if (ip != null) {
+      connector.setHost(ip);
+    }
+    connector.setPort(port);
+    configureConnector(proto, connector);
     jettyServer.setConnectors(new Connector[]{connector});
-
     return jettyServer;
+  }
+
+  // Configure connector via properties which we can modify.
+  // Also increase request header size and buffer size from default values
+  // located in org.eclipse.jetty.http.HttpBuffersImpl
+  // see PUBDEV-5939 for details
+  private void configureConnector(String proto, Connector connector) {
+    connector.setRequestHeaderSize(getSysPropInt(proto+".requestHeaderSize", 32*1024));
+    connector.setRequestBufferSize(getSysPropInt(proto+".requestBufferSize", 32*1024));
+    connector.setResponseHeaderSize(getSysPropInt(proto+".responseHeaderSize", connector.getResponseHeaderSize()));
+    connector.setResponseBufferSize(getSysPropInt(proto+".responseBufferSize", connector.getResponseBufferSize()));
+  }
+
+  private static int getSysPropInt(String suffix, int defaultValue) {
+    return Integer.getInteger(H2OHttpConfig.SYSTEM_PROP_PREFIX + suffix, defaultValue);
   }
 
   HandlerWrapper authWrapper(Server jettyServer) {
@@ -84,15 +103,15 @@ class Jetty8Helper {
       default:
         throw new UnsupportedOperationException(config.loginType + ""); // this can never happen
     }
-    IdentityService identityService = new DefaultIdentityService();
+    final IdentityService identityService = new DefaultIdentityService();
     loginService.setIdentityService(identityService);
     jettyServer.addBean(loginService);
 
     // Set a security handler as the first handler in the chain.
-    ConstraintSecurityHandler security = new ConstraintSecurityHandler();
+    final ConstraintSecurityHandler security = new ConstraintSecurityHandler();
 
     // Set up a constraint to authenticate all calls, and allow certain roles in.
-    Constraint constraint = new Constraint();
+    final Constraint constraint = new Constraint();
     constraint.setName("auth");
     constraint.setAuthenticate(true);
 
@@ -113,13 +132,13 @@ class Jetty8Helper {
     //
     // constraint.setRoles(new String[]{Constraint.ANY_AUTH});
 
-    ConstraintMapping mapping = new ConstraintMapping();
+    final ConstraintMapping mapping = new ConstraintMapping();
     mapping.setPathSpec("/*"); // Lock down all API calls
     mapping.setConstraint(constraint);
     security.setConstraintMappings(Collections.singletonList(mapping));
 
     // Authentication / Authorization
-    Authenticator authenticator;
+    final Authenticator authenticator;
     if (config.form_auth) {
       BasicAuthenticator basicAuthenticator = new BasicAuthenticator();
       FormAuthenticator formAuthenticator = new FormAuthenticator("/login", "/loginError", false);
@@ -130,14 +149,15 @@ class Jetty8Helper {
     security.setLoginService(loginService);
     security.setAuthenticator(authenticator);
 
-    HashSessionIdManager idManager = new HashSessionIdManager();
+    final HashSessionIdManager idManager = new HashSessionIdManager();
     jettyServer.setSessionIdManager(idManager);
 
-    HashSessionManager manager = new HashSessionManager();
-    if (config.session_timeout > 0)
+    final HashSessionManager manager = new HashSessionManager();
+    if (config.session_timeout > 0) {
       manager.setMaxInactiveInterval(config.session_timeout * 60);
+    }
 
-    SessionHandler sessionHandler = new SessionHandler(manager);
+    final SessionHandler sessionHandler = new SessionHandler(manager);
     sessionHandler.setHandler(security);
 
     // Pass-through to H2O if authenticated.
@@ -146,53 +166,13 @@ class Jetty8Helper {
 
   }
 
-  private Connector createHttpConnector() {
-
-    Connector connector=new SocketConnector();
-    connector.setHost(_ip);
-    connector.setPort(_port);
-    configureConnector("http", connector);
-    return connector;
-  }
-
-  private Connector createHttpsConnector() {
-    SslContextFactory sslContextFactory = new SslContextFactory(config.jks);
-    sslContextFactory.setKeyStorePassword(config.jks_pass);
-
-    SslSocketConnector httpsConnector = new SslSocketConnector(sslContextFactory);
-
-    if (_ip != null) {
-      httpsConnector.setHost(_ip);
-    }
-    httpsConnector.setPort(_port);
-    configureConnector("https", httpsConnector);
-    return httpsConnector;
-  }
-
-  // Configure connector via properties which we can modify.
-  // Also increase request header size and buffer size from default values
-  // located in org.eclipse.jetty.http.HttpBuffersImpl
-  // see PUBDEV-5939 for details
-  private void configureConnector(String proto, Connector connector) {
-    connector.setRequestHeaderSize(getSysPropInt(proto+".requestHeaderSize", 32*1024));
-    connector.setRequestBufferSize(getSysPropInt(proto+".requestBufferSize", 32*1024));
-    connector.setResponseHeaderSize(getSysPropInt(proto+".responseHeaderSize", connector.getResponseHeaderSize()));
-    connector.setResponseBufferSize(getSysPropInt(proto+".responseBufferSize", connector.getResponseBufferSize()));
-  }
-
-  private static int getSysPropInt(String suffix, int defaultValue) {
-    return Integer.getInteger(H2OHttpConfig.SYSTEM_PROP_PREFIX + suffix, defaultValue);
-  }
-
   /**
    * Hook up Jetty handlers.  Do this before start() is called.
    */
   ServletContextHandler createServletContextHandler() {
     // Both security and session handlers are already created (Note: we don't want to create a new separate session
     // handler just for ServletContextHandler - we want to have just one SessionHandler & SessionManager)
-    final ServletContextHandler context = new ServletContextHandler(
-            ServletContextHandler.NO_SECURITY | ServletContextHandler.NO_SESSIONS
-    );
+    final ServletContextHandler context = new ServletContextHandler(ServletContextHandler.NO_SECURITY | ServletContextHandler.NO_SESSIONS);
 
     if(null != config.context_path && ! config.context_path.isEmpty()) {
       context.setContextPath(config.context_path);

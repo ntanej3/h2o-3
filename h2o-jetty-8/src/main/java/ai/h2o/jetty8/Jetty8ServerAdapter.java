@@ -81,14 +81,14 @@ class Jetty8ServerAdapter implements WebServer {
     extHandlers.add(context);
 
     // Handlers that can only be invoked for an authenticated user (if auth is enabled)
-    HandlerCollection authHandlers = new HandlerCollection();
+    final HandlerCollection authHandlers = new HandlerCollection();
     authHandlers.setHandlers(extHandlers.toArray(new Handler[0]));
 
     // LoginHandler handles directly login requests and delegates the rest to the authHandlers
     final LoginHandler loginHandler = new LoginHandler();
     loginHandler.setHandler(authHandlers);
 
-    HandlerCollection hc = new HandlerCollection();
+    final HandlerCollection hc = new HandlerCollection();
     hc.setHandlers(new Handler[]{
         new GateHandler(),
         loginHandler
