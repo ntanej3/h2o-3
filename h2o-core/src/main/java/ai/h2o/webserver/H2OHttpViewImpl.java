@@ -54,12 +54,7 @@ public class H2OHttpViewImpl implements H2OHttpView {
    * @return URI scheme
    */
   public String getScheme() {
-    if (config.jks != null) {
-      return "https";
-    }
-    else {
-      return "http";
-    }
+    return config.jks == null ? "http" : "https";
   }
 
   @Override
