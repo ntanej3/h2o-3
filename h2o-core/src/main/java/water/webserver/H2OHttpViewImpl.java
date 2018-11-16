@@ -1,8 +1,5 @@
-package ai.h2o.webserver;
+package water.webserver;
 
-import ai.h2o.webserver.iface.H2OHttpConfig;
-import ai.h2o.webserver.iface.H2OHttpView;
-import ai.h2o.webserver.iface.RequestAuthExtension;
 import org.apache.commons.io.IOUtils;
 import water.ExtensionManager;
 import water.api.DatasetServlet;
@@ -12,6 +9,9 @@ import water.api.PutKeyServlet;
 import water.api.RequestServer;
 import water.server.ServletUtils;
 import water.util.Log;
+import water.webserver.iface.H2OHttpConfig;
+import water.webserver.iface.H2OHttpView;
+import water.webserver.iface.RequestAuthExtension;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;

@@ -1,6 +1,5 @@
 package water;
 
-import ai.h2o.webserver.iface.WebServer;
 import hex.ModelBuilder;
 import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinPool;
@@ -25,6 +24,7 @@ import water.util.Log;
 import water.util.NetworkUtils;
 import water.util.OSUtils;
 import water.util.PrettyPrint;
+import water.webserver.iface.WebServer;
 
 import java.io.BufferedWriter;
 import java.io.File;

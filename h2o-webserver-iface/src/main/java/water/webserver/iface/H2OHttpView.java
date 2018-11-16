@@ -1,4 +1,4 @@
-package ai.h2o.webserver.iface;
+package water.webserver.iface;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;

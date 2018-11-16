@@ -1,12 +1,12 @@
 package water;
 
 
-import ai.h2o.webserver.iface.RequestAuthExtension;
 import water.api.RequestServer;
 import water.api.RestApiExtension;
 import water.api.SchemaServer;
 import water.util.Log;
 import water.util.StringUtils;
+import water.webserver.iface.RequestAuthExtension;
 
 import java.util.Arrays;
 import java.util.Collection;

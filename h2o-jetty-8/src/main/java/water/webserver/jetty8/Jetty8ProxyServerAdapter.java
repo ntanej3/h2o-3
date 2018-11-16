@@ -1,9 +1,5 @@
-package ai.h2o.jetty8;
+package water.webserver.jetty8;
 
-import ai.h2o.jetty8.proxy.TransparentProxyServlet;
-import ai.h2o.webserver.iface.Credentials;
-import ai.h2o.webserver.iface.H2OHttpView;
-import ai.h2o.webserver.iface.ProxyServer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -11,6 +7,9 @@ import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import water.webserver.iface.Credentials;
+import water.webserver.iface.H2OHttpView;
+import water.webserver.iface.ProxyServer;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;

@@ -1,4 +1,4 @@
-package ai.h2o.jetty8.proxy;
+package water.webserver.jetty8;
 
 import org.eclipse.jetty.client.HttpExchange;
 import org.eclipse.jetty.servlets.ProxyServlet;

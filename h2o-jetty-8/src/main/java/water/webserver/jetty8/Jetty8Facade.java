@@ -1,10 +1,10 @@
-package ai.h2o.jetty8;
+package water.webserver.jetty8;
 
-import ai.h2o.webserver.iface.Credentials;
-import ai.h2o.webserver.iface.H2OHttpView;
-import ai.h2o.webserver.iface.HttpServerFacade;
-import ai.h2o.webserver.iface.ProxyServer;
-import ai.h2o.webserver.iface.WebServer;
+import water.webserver.iface.Credentials;
+import water.webserver.iface.H2OHttpView;
+import water.webserver.iface.HttpServerFacade;
+import water.webserver.iface.ProxyServer;
+import water.webserver.iface.WebServer;
 
 public class Jetty8Facade implements HttpServerFacade {
   @Override

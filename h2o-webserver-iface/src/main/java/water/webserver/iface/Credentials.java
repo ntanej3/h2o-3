@@ -1,4 +1,4 @@
-package ai.h2o.webserver.iface;
+package water.webserver.iface;
 
 import org.apache.commons.codec.binary.Base64;
 

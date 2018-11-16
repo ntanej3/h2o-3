@@ -1,15 +1,15 @@
 package water.init;
 
-import ai.h2o.webserver.H2OHttpViewImpl;
-import ai.h2o.webserver.iface.H2OHttpConfig;
-import ai.h2o.webserver.iface.HttpServerLoader;
-import ai.h2o.webserver.iface.LoginType;
 import water.H2O;
 import water.H2ONode;
 import water.server.ServletUtils;
 import water.util.Log;
 import water.util.NetworkUtils;
 import water.util.StringUtils;
+import water.webserver.H2OHttpViewImpl;
+import water.webserver.iface.H2OHttpConfig;
+import water.webserver.iface.HttpServerLoader;
+import water.webserver.iface.LoginType;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
