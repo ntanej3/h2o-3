@@ -269,3 +269,15 @@ class H2OPrincipalComponentAnalysisEstimator(H2OEstimator):
         self._parms["max_runtime_secs"] = max_runtime_secs
 
 
+
+    def transform(self, X, y=None, **params):
+        """
+        Transform the given H2OFrame with the fitted PCA model.
+
+        :param H2OFrame X: May contain NAs and/or categorical data.
+        :param H2OFrame y: Ignored for PCA. Should be None.
+        :param params: Ignored.
+
+        :returns: The input H2OFrame transformed by the Principal Components.
+        """
+        return self.predict(X)
